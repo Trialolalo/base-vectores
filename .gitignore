@@ -1,4 +1,4 @@
 /node_modules
-/src/config/config.json
-.env
+/src/chromadb
+/src/.env
 package-lock.json

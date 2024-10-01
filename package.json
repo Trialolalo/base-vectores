@@ -1,5 +1,14 @@
 {
   "dependencies": {
-    "selenium-webdriver": "^4.24.0"
+    "chromadb": "^1.9.2",
+    "chromadb-default-embed": "^2.13.2",
+    "dotenv": "^16.4.5",
+    "https": "^1.0.0",
+    "openai": "^4.66.1",
+    "puppeteer": "^23.4.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "selenium-webdriver": "^4.24.0",
+    "zod": "^3.23.8"
   }
 }

@@ -1,0 +1,8 @@
+Abrir la base de datos de vectores desde cmd. Ir hasta la carpeta del proyecto y ejecutar el siguiente comando:
+
+```
+chroma run --path ./src/chromadb
+
+Para arrancar el proyecto
+
+npm install en la raiz y añadir la apikey de openai en el archivo .env
