@@ -66,6 +66,12 @@ class MandarakeScraper {
   async scrapeProductDetails(product) {
     await this.driver.get(`${product.url}`);
 
+    const layoutElement = await this.driver.findElements(By.id('__layout'));
+    if (layoutElement.length > 0) {
+      console.log(`Producto saltado debido a la presencia del ID __layout: ${product.url}`);
+      return; // Saltar este producto
+    }
+
     const urlParams = new URLSearchParams(new URL(product.url).search);
     const id = urlParams.get('itemCode');
 
