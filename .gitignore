@@ -2,3 +2,4 @@
 /src/chromadb
 /src/.env
 package-lock.json
+chroma.log

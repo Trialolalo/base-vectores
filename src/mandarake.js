@@ -29,6 +29,15 @@ class MandarakeScraper {
     let productElements = await this.driver.findElements(By.css('.thum a'));
 
     for (let productElement of productElements) {
+
+      const r18markElements = await productElement.findElements(By.xpath('./ancestor::div[@class="thum"]//div[contains(@class, "r18mark")]'));
+        
+      // Si encuentra un elemento con la clase "r18mark", saltarlo
+      if (r18markElements.length > 0) {
+        console.log("Elemento saltado por ser contenido R18");
+        continue; 
+      }
+
       let url = await productElement.getAttribute('href');
       let title = (await productElement.findElement(By.xpath('./ancestor::div[@class="block"]//div[@class="title"]/p/a')).getText());
       let shop = (await productElement.findElement(By.xpath('./ancestor::div[@class="block"]//p[@class="shop"]')).getText()).split(' ')[0];
