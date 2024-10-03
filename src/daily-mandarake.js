@@ -41,6 +41,15 @@ class MandarakeScraper {
           ids: [id]
         });
 
+        const r18markElements = await productElement.findElements(By.xpath('./ancestor::div[@class="thum"]//div[contains(@class, "r18mark")]'));
+        
+        // Si encuentra un elemento con la clase "r18mark", saltarlo
+        if (r18markElements.length > 0) {
+          console.log("Elemento saltado por ser contenido R18");
+          continue; 
+        }
+
+
         if(element.ids.length > 0){
           continue
         }
@@ -76,6 +85,81 @@ class MandarakeScraper {
   }
 
   async scrapeProductDetails(product) {
+    await this.driver.get(`${product.url}`);
+
+    const layoutElement = await this.driver.findElements(By.id('__layout'));
+
+    if (layoutElement.length > 0) {
+      await this.scrapeAriaruProduct(product)
+    }else{
+      await this.scrapeMandarakeProduct(product)
+    }
+  }
+
+  async scrapeAriaruProduct(product){
+    const urlParams = new URLSearchParams(new URL(product.url).search);
+    const id = urlParams.get('itemCode');
+
+    if(this.storedProducts.includes(id)){
+      return;
+    }
+
+    if(!this.products[id]){
+      product.condition = await this.driver.findElement(By.css('.item__property dd')).getText();
+      product.size  = await this.driver.findElement(By.css('dl.item__property dd:nth-of-type(2)')).getText();
+
+      const keywordsElements = await this.driver.findElements(By.css('div.item__feature ul li'));
+
+      product.keywords = await Promise.all(keywordsElements.map(async (keywordsElement) => {
+        return await keywordsElement.getText();
+      }));
+
+      this.products[id] = {
+        ...product
+      }
+
+      let images = await this.driver.findElements(By.css('.item__thumbnail-images img'))
+
+      images = await Promise.all(images.map(async (element) => {
+        const image = (await element.getAttribute('src')).replace('s_','')
+        return image
+      }))
+
+      for (const imageUrl of images) {
+        try {
+          const buffer = await new Promise((resolve, reject) => {
+            https.get(imageUrl, (res) => {
+              const chunks = []
+  
+              res.on('data', (chunk) => {
+                chunks.push(chunk)
+              })
+  
+              res.on('end', () => {
+                resolve(Buffer.concat(chunks))
+              })
+  
+              res.on('error', (err) => {
+                reject(err)
+              })
+            })
+          })
+  
+          if (!fs.existsSync(`./../storage/scrapping/mandarake/images/${id}`)) {
+            fs.mkdirSync(`./../storage/scrapping/mandarake/images/${id}`, { recursive: true })
+          }
+  
+          if (!fs.existsSync(`./../storage/scrapping/mandarake/images/${id}/${imageUrl.split('/').pop()}`)) {
+            fs.writeFile(`./../storage/scrapping/mandarake/images/${id}/${imageUrl.split('/').pop()}`, buffer, () => {})
+          }
+        } catch (err) {
+          console.log(err)
+        }
+      }
+    }
+  }
+
+  async scrapeMandarakeProduct(product) {
     await this.driver.get(`${product.url}`);
 
     product.condition = await this.driver.findElement(By.css('.condition td')).getText();

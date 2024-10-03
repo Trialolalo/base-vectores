@@ -36,14 +36,26 @@ class MandarakeScraper {
 
   async updateProducts() {
     for (const product of this.products){
-      await this.driver.get(`${product.url}`);
+      try {
+        await this.driver.get(`https://order.mandarake.co.jp/order/detailPage/item?itemCode=127395772300`);
+  
+        await this.driver.sleep(3000); 
+        const currentUrl = await this.driver.getCurrentUrl();
+        const pageError = await this.driver.findElements(By.css('.error-page')); 
 
-      const pageError = await this.driver.findElements(By.css('.error-page')); 
-      
-      if (pageError.length > 0) {
-        console.log(`Producto no encontrado: ${product.url}`);
-        await this.deleteProducts(product);  
-        continue; 
+        if (currentUrl === 'https://order.mandarake.co.jp/order/') {
+          console.log(`Producto redirigido a la página principal, no existe: ${product.url}`);
+          await this.deleteProducts(product);  
+          continue; 
+        } 
+        else if (currentUrl === 'https://www.mandarake.co.jp/ariaru/') {
+          console.log(`Producto redirigido a la página principal de Ariaru, no existe: ${product.url}`);
+          await this.deleteProducts(product);  
+          continue; 
+        }
+
+      }catch (error) {
+        console.log(error)
       }
 
       const layoutElement = await this.driver.findElements(By.id('__layout'));
@@ -97,21 +109,19 @@ class MandarakeScraper {
 
   async deleteProducts(product) {
 
-      // Eliminar el producto de la colección de ChromaDB
-  await this.chromadbCollection.delete({
-    ids: [product.id]  // Eliminar el producto usando su ID
-  });
+    await this.chromadbCollection.delete({
+      ids: [product.id]  
+    });
 
-  // Eliminar las imágenes del sistema de archivos
-  const imagePath = `./../storage/scrapping/mandarake/images/${product.id}`;
-  if (fs.existsSync(imagePath)) {
-    fs.rmSync(imagePath, { recursive: true, force: true });
-    console.log(`Imágenes del producto ${product.id} eliminadas correctamente`);
-  } else {
-    console.log(`No se encontraron imágenes para el producto ${product.id}`);
-  }
+    const imagePath = `./../storage/scrapping/mandarake/images/${product.id}`;
+    if (fs.existsSync(imagePath)) {
+      fs.rmSync(imagePath, { recursive: true, force: true });
+      console.log(`Imágenes del producto ${product.id} eliminadas correctamente`);
+    } else {
+      console.log(`No se encontraron imágenes para el producto ${product.id}`);
+    }
 
-  console.log(`Producto ${product.id} eliminado de la base de datos`);
+    console.log(`Producto ${product.id} eliminado de la base de datos`);
   }
 
   async run() {
