@@ -4,6 +4,7 @@
     "chromadb-default-embed": "^2.13.2",
     "dotenv": "^16.4.5",
     "https": "^1.0.0",
+    "node-telegram-bot-api": "^0.66.0",
     "openai": "^4.66.1",
     "puppeteer": "^23.4.0",
     "puppeteer-extra": "^3.3.6",

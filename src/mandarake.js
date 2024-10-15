@@ -266,7 +266,7 @@ class MandarakeScraper {
       await category.click();
 
       // Recorrer páginas de productos
-      for (let i = 1; i <= 199; i++) {
+      for (let i = 1; i <= 5; i++) {
         await this.scrapeListPage(i);
       }
 
@@ -283,11 +283,13 @@ class MandarakeScraper {
         }
       })
 
-      const ids = []
-      const metadatas = []
-      const documents = []
-
       if(this.products.length > 0){
+
+        const ids = []
+        const metadatas = []
+        const documents = []
+        const batchSize = 100
+
         Object.entries(this.products).forEach(([key, value]) =>{
           ids.push(key)
           documents.push(value.keywords.join(' '))
@@ -296,12 +298,26 @@ class MandarakeScraper {
           value.id = key
           metadatas.push(value)
         })
+
+        const idBatches = splitIntoBatches(ids, batchSize)
+        const metadataBatches = splitIntoBatches(metadatas, batchSize)
+        const documentBatches = splitIntoBatches(documents, batchSize)
   
-        await this.chromadbCollection.add({
-          ids,
-          metadatas,
-          documents
-        })
+        for (let i = 0; i < idBatches.length; i++) {
+          try {
+            console.log(`Enviando lote ${i + 1} de ${idBatches.length}...`);
+      
+            await chromadbCollection.add({
+              ids: idBatches[i],
+              metadatas: metadataBatches[i],
+              documents: documentBatches[i]
+            });
+      
+            console.log(`Lote ${i + 1} enviado correctamente.`);
+          } catch (err) {
+            console.log(`Error al enviar el lote ${i + 1}:`, err);
+          }
+        }
       }
       
     } catch (error) {

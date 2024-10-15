@@ -3,6 +3,9 @@ const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const https = require('https')
 const fs = require('fs');
+const OpenAIService = require('./services/openai-service');
+const TelegramService = require('./services/telegram-service');
+
 
 class MandarakeScraper {
   constructor() {
@@ -100,10 +103,6 @@ class MandarakeScraper {
     const urlParams = new URLSearchParams(new URL(product.url).search);
     const id = urlParams.get('itemCode');
 
-    if(this.storedProducts.includes(id)){
-      return;
-    }
-
     if(!this.products[id]){
       product.condition = await this.driver.findElement(By.css('.item__property dd')).getText();
       product.size  = await this.driver.findElement(By.css('dl.item__property dd:nth-of-type(2)')).getText();
@@ -186,8 +185,6 @@ class MandarakeScraper {
       return await element.getAttribute('src')
     }))
 
-    console.log(images)
-
     for (const imageUrl of images) {
       try {
         const buffer = await new Promise((resolve, reject) => {
@@ -219,6 +216,15 @@ class MandarakeScraper {
         console.log(err)
       }
     }
+  }
+
+  splitIntoBatches(array, batchSize) {
+    const batches = [];
+    for (let i = 0; i < array.length; i += batchSize) {
+      const batch = array.slice(i, i + batchSize);
+      batches.push(batch);
+    }
+    return batches;
   }
 
   async run() {
@@ -267,6 +273,7 @@ class MandarakeScraper {
         const ids = []
         const metadatas = []
         const documents = []
+        const batchSize = 100;
 
         Object.entries(this.products).forEach(([key, value]) =>{
           ids.push(key)
@@ -277,12 +284,30 @@ class MandarakeScraper {
           metadatas.push(value)
         })
 
-        await this.chromadbCollection.add({
-          ids,
-          metadatas,
-          documents
-        })
+        const idBatches = splitIntoBatches(ids, batchSize);
+        const metadataBatches = splitIntoBatches(metadatas, batchSize);
+        const documentBatches = splitIntoBatches(documents, batchSize);
+
+        for (let i = 0; i < idBatches.length; i++) {
+          try {
+            console.log(`Enviando lote ${i + 1} de ${idBatches.length}...`);
+      
+            await chromadbCollection.add({
+              ids: idBatches[i],
+              metadatas: metadataBatches[i],
+              documents: documentBatches[i]
+            });
+      
+            console.log(`Lote ${i + 1} enviado correctamente.`);
+          } catch (err) {
+            console.log(`Error al enviar el lote ${i + 1}:`, err);
+          }
+        }
       }
+
+      const telegramService = new TelegramService();
+      const message = 'Scrapping hecho con éxito'
+      telegramService.sendMessage(process.env.CHAT_ID, message);
 
     } catch (error) {
       console.error('Error:', error);
