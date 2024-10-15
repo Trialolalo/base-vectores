@@ -1,4 +1,5 @@
 const OpenAI = require('openai')
+const fs = require('fs')
 const { zodResponseFormat } = require('openai/helpers/zod')
 const { z } = require('zod')
 
@@ -137,6 +138,16 @@ module.exports = class OpenAIService {
       console.log(err)
     }
   }
+
+  audioTranscription = async (file) => {
+    const response = await this.openai.audio.transcriptions.create({
+      file: file,
+      model: "whisper-1",
+    })
+
+    return response.text
+  }
+
 
   filterData = async (prompt, data) => {
     try {

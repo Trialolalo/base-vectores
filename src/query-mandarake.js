@@ -6,6 +6,7 @@ const OpenAIService = require('./services/openai-service')
 const TelegramBot = require('node-telegram-bot-api')
 const fs = require('fs/promises')
 const fsClassic = require('fs');
+const { PassThrough } = require('stream')
 const path = require('path')
 
 class MandarakeQuery {
@@ -25,6 +26,11 @@ class MandarakeQuery {
         const chatId = msg.chat.id
         await this.analyzeImage(msg, chatId)
       }
+
+      if (msg.voice) {
+        const chatId = msg.chat.id;
+        await this.analyzeAudio(msg, chatId)
+      }
     })
 
     // this.bot.onText(/\/all/, async (msg) => {
@@ -42,7 +48,7 @@ class MandarakeQuery {
     const fileId = message.photo[message.photo.length - 1].file_id;
     try{
       const fileUrl = await this.bot.getFileLink(fileId)
-      const base64 = await this.imageToBase64(fileUrl)
+      const base64 = await this.fileToBase64(fileUrl)
       const images = [base64]
       const prompt = "¿que personaje crees que es? dime un nombre aunque tengas dudas. Responde solo con el nombre"
 
@@ -102,6 +108,16 @@ class MandarakeQuery {
     }
   }
 
+  async analyzeAudio(msg, chatId){
+    const fileId = msg.voice.file_id; 
+    const fileUrl = await this.bot.getFileLink(fileId);
+    const file = await this.downloadAudioAsStream(fileUrl);
+    const text = await this.OpenAIService.audioTranscription(file)
+    console.log(text);
+  
+    this.sendMessage("He recibido tu audio, procesando...", chatId);
+  }
+
   async search(message, chatId){
     const chromadbCollection = await chromaClient.getOrCreateCollection({ name: 'mandarake' })
     const object = await this.OpenAIService.extractKeywords(message)
@@ -137,7 +153,33 @@ class MandarakeQuery {
     }
   }
 
-  async imageToBase64(url) {
+  downloadAudioAsStream = (url) => {
+    return new Promise((resolve, reject) => {
+      const stream = new PassThrough();
+      const filePath = './tempAudio.oga'; 
+      const fileStream = fsClassic.createWriteStream(filePath);
+      
+      https.get(url, (response) => {
+        if (response.statusCode === 200) {
+          response.pipe(stream);
+          stream.pipe(fileStream);
+
+          fileStream.on('finish', () => {
+            fileStream.close(); 
+            resolve(fileStream); 
+          });
+        } else {
+          console.log("ERROR")
+          reject(new Error(`Error al descargar el audio: ${response.statusCode}`));
+        }
+      }).on('error', (err) => {
+        reject(err);
+      });
+    });
+  };
+
+
+  async fileToBase64(url) {
     return new Promise((resolve, reject) => {
       https.get(url, (res) => {
         let data = [];
