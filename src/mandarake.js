@@ -1,6 +1,7 @@
 const { ChromaClient } = require('chromadb')
-const { Builder, By, until } = require('selenium-webdriver');
+const { Builder, By, Key, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
+const mysql = require('mysql2/promise');
 const https = require('https')
 const fs = require('fs');
 
@@ -9,6 +10,25 @@ class MandarakeScraper {
     this.driver = null;
     this.galleryProducts = [];
     this.products = {}
+    this.initDB(); 
+  }
+
+  async initDB() {
+    this.connection = await mysql.createConnection({
+      host: 'localhost',   // Cambia esto según tu configuración
+      user: 'root',        // Usuario de MySQL
+      password: 'password', // Contraseña de MySQL
+      database: 'mandarake'  // Nombre de la base de datos
+    });
+  }
+
+  async logScriptExecution(scriptname, completed) {
+    const datetime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const query = `
+      INSERT INTO script_logs (scriptname, completed, datetime)
+      VALUES (?, ?, ?)
+    `;
+    await this.connection.execute(query, [scriptname, completed, datetime]);
   }
 
   async init() {
@@ -16,9 +36,10 @@ class MandarakeScraper {
     this.chromadbCollection = await client.getOrCreateCollection({ name: 'mandarake' })
 
     let options = new chrome.Options();
-    options.addArguments('start-maximized'); // Maximizando ventana
+    options.addArguments('start-maximized'); 
+    options.addArguments('disable-blink-features=AutomationControlled');
+    
 
-    // Inicializa el driver de Chrome
     this.driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
     this.storedProducts =  (await this.chromadbCollection.get()).ids.map(product => product)
   }
@@ -254,12 +275,17 @@ class MandarakeScraper {
       await this.driver.manage().deleteAllCookies();
 
       // Ir a la página principal
-      await this.driver.get('https://mandarake.co.jp');
+      await this.driver.get('https://www.mandarake.co.jp/');
+
+      await this.driver.sleep(15000)
 
       // Seleccionar el primer item
       await this.driver.wait(until.elementLocated(By.css('ul.select')), 10000);
       let firstItem = await this.driver.findElement(By.css('ul.select li:first-child a'));
       await firstItem.click();
+
+      await this.driver.sleep(5000)
+
 
       // Seleccionar la categoría
       let category = await this.driver.findElement(By.css('.toy a'));
@@ -319,12 +345,28 @@ class MandarakeScraper {
           }
         }
       }
+
       
+      await this.logScriptExecution('MandarakeScraper', true);
+
     } catch (error) {
+      
       console.error('Error:', error);
+
+      try {
+         // Inicializa la base de datos
+        await this.logScriptExecution('MandarakeScraper', false); // Log del error
+      } catch (dbError) {
+        console.error('Error al conectar con la base de datos:', dbError);
+      }
+
     } finally {
       if (this.driver) {
         await this.driver.quit();  // Cerrar el navegador al final
+      }
+
+      if (this.connection) {
+        await this.connection.end();  // Cerrar la conexión a la base de datos al final
       }
     }
   }

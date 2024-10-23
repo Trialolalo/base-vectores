@@ -3,9 +3,9 @@ const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const https = require('https')
 const fs = require('fs');
+const mysql = require('mysql2/promise');
 const OpenAIService = require('./services/openai-service');
 const TelegramService = require('./services/telegram-service');
-
 
 class MandarakeScraper {
   constructor() {
@@ -13,6 +13,24 @@ class MandarakeScraper {
     this.driver = null;
     this.galleryProducts = [];
     this.products = {}
+  }
+
+  async initDB() {
+    this.connection = await mysql.createConnection({
+      host: 'localhost',   // Cambia esto según tu configuración
+      user: 'root',        // Usuario de MySQL
+      password: 'password', // Contraseña de MySQL
+      database: 'mandarake'  // Nombre de la base de datos
+    });
+  }
+
+  async logScriptExecution(scriptname, completed) {
+    const datetime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const query = `
+      INSERT INTO script_logs (scriptname, completed, datetime)
+      VALUES (?, ?, ?)
+    `;
+    await this.connection.execute(query, [scriptname, completed, datetime]);
   }
 
   async init() {
@@ -241,8 +259,10 @@ class MandarakeScraper {
       await firstItem.click();
 
       // Seleccionar la categoría
-      let category = await this.driver.findElement(By.css('.toy a'));
-      await category.click();
+      let category = await this.driver.wait(
+        until.elementLocated(By.css('.toy a')),
+        10000 // Tiempo de espera de 20 segundos
+      );
 
       // Recorrer páginas de productos
       for (let i = 1; i <= 199; i++) {
