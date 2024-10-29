@@ -259,10 +259,13 @@ class MandarakeScraper {
       await firstItem.click();
 
       // Seleccionar la categoría
-      let category = await this.driver.wait(
-        until.elementLocated(By.css('.toy a')),
-        10000 // Tiempo de espera de 20 segundos
-      );
+      let menuButton = await this.driver.wait(until.elementLocated(By.css('.toy .parent')), 10000);
+      await menuButton.click(); 
+
+
+      let category = await this.driver.wait(until.elementLocated(By.xpath("//a[contains(text(), 'Sofubi')]")), 10000);
+      await this.driver.wait(until.elementIsVisible(category), 10000); // Asegúrate de que el elemento es visible
+      await category.click(); // Hacer clic en "Sofubi"
 
       // Recorrer páginas de productos
       for (let i = 1; i <= 199; i++) {

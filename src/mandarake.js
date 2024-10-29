@@ -38,7 +38,6 @@ class MandarakeScraper {
     let options = new chrome.Options();
     options.addArguments('start-maximized'); 
     options.addArguments('disable-blink-features=AutomationControlled');
-    
 
     this.driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
     this.storedProducts =  (await this.chromadbCollection.get()).ids.map(product => product)
@@ -277,8 +276,6 @@ class MandarakeScraper {
       // Ir a la página principal
       await this.driver.get('https://www.mandarake.co.jp/');
 
-      await this.driver.sleep(15000)
-
       // Seleccionar el primer item
       await this.driver.wait(until.elementLocated(By.css('ul.select')), 10000);
       let firstItem = await this.driver.findElement(By.css('ul.select li:first-child a'));
@@ -288,8 +285,14 @@ class MandarakeScraper {
 
 
       // Seleccionar la categoría
-      let category = await this.driver.findElement(By.css('.toy a'));
-      await category.click();
+      let menuButton = await this.driver.wait(until.elementLocated(By.css('.toy .parent')), 10000);
+      await menuButton.click(); 
+
+
+      let category = await this.driver.wait(until.elementLocated(By.xpath("//a[contains(text(), 'Sofubi')]")), 10000);
+      await this.driver.wait(until.elementIsVisible(category), 10000); // Asegúrate de que el elemento es visible
+      await category.click(); // Hacer clic en "Sofubi"
+
 
       // Recorrer páginas de productos
       for (let i = 1; i <= 5; i++) {
