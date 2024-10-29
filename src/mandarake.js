@@ -1,7 +1,7 @@
 const { ChromaClient } = require('chromadb')
 const { Builder, By, Key, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
-const mysql = require('mysql2/promise');
+// const mysql = require('mysql2/promise');
 const https = require('https')
 const fs = require('fs');
 
@@ -13,14 +13,14 @@ class MandarakeScraper {
     this.initDB(); 
   }
 
-  async initDB() {
-    this.connection = await mysql.createConnection({
-      host: 'localhost',   // Cambia esto según tu configuración
-      user: 'root',        // Usuario de MySQL
-      password: 'password', // Contraseña de MySQL
-      database: 'mandarake'  // Nombre de la base de datos
-    });
-  }
+  // async initDB() {
+  //   this.connection = await mysql.createConnection({
+  //     host: 'localhost',   // Cambia esto según tu configuración
+  //     user: 'root',        // Usuario de MySQL
+  //     password: 'password', // Contraseña de MySQL
+  //     database: 'mandarake'  // Nombre de la base de datos
+  //   });
+  // }
 
   async logScriptExecution(scriptname, completed) {
     const datetime = new Date().toISOString().slice(0, 19).replace('T', ' ');
